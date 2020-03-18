@@ -1,5 +1,6 @@
 /**
  * Copyright (c) 2015, Salesforce.com, Inc. All rights reserved.
+ * Copyright (c) 2020, Bitshift (bitshifted.co), Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -25,16 +26,11 @@
  */
 package com.salesforce.zsync.internal;
 
-import com.google.common.base.Function;
+import com.salesforce.zsync.internal.util.Function;
 
 abstract class BlockSum {
 
-  static final Function<BlockSum, Integer> getRsum = new Function<BlockSum, Integer>() {
-    @Override
-    public Integer apply(BlockSum input) {
-      return input.getRsum();
-    }
-  };
+  static final Function<BlockSum, Integer> getRsum = (input -> input.getRsum());
 
   abstract int getRsum();
 

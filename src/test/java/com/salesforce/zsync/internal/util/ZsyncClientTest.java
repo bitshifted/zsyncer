@@ -26,8 +26,6 @@
  */
 package com.salesforce.zsync.internal.util;
 
-import com.google.common.collect.ImmutableMultimap;
-import com.google.common.net.MediaType;
 import com.salesforce.zsync.http.ContentRange;
 import org.junit.Test;
 
@@ -61,8 +59,9 @@ public class ZsyncClientTest {
   @Test
   public void testGetBoundary() throws IOException {
     final String expected = "gc0p4Jq0M2Yt08jU534c0p";
-    assertArrayEquals(expected.getBytes(ISO_8859_1), getBoundary(MediaType.create("multipart", "byteranges")
-        .withParameters(ImmutableMultimap.of("boundary", expected))));
+    final Map<String, List<String>> parameters = new HashMap<>();
+    parameters.put("boundary", List.of(expected));
+    assertArrayEquals(expected.getBytes(ISO_8859_1), getBoundary(MediaType.create("multipart", "byteranges", parameters)));
   }
 
   @Test
@@ -79,9 +78,10 @@ public class ZsyncClientTest {
     headers.put("Content-Type", List.of("multipart/byteranges;boundary=gc0p4Jq0M2Yt08jU534c0p"));
     final HttpResponse response = fakeResponse(200, headers);
 
+    final Map<String, List<String>> parameters = new HashMap<>();
+    parameters.put("boundary", List.of("gc0p4Jq0M2Yt08jU534c0p"));
     assertEquals(
-        MediaType.create("multipart", "byteranges").withParameters(
-            ImmutableMultimap.of("boundary", "gc0p4Jq0M2Yt08jU534c0p")), parseContentType(response));
+        MediaType.create("multipart", "byteranges", parameters), parseContentType(response));
   }
 
   @Test(expected = ParseException.class)

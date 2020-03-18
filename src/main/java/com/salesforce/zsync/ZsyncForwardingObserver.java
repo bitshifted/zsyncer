@@ -1,5 +1,6 @@
 /**
  * Copyright (c) 2015, Salesforce.com, Inc. All rights reserved.
+ * Copyright (c) 2020, Bitshift (bitshifted.co), Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -25,14 +26,12 @@
  */
 package com.salesforce.zsync;
 
-import static com.google.common.collect.ImmutableList.copyOf;
-
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.salesforce.zsync.Zsync.Options;
 import com.salesforce.zsync.http.ContentRange;
 
@@ -48,12 +47,15 @@ public class ZsyncForwardingObserver extends ZsyncObserver {
   private List<ZsyncObserver> observers;
 
   public ZsyncForwardingObserver(ZsyncObserver... targets) {
-    this(targets == null ? ImmutableList.<ZsyncObserver>of() : ImmutableList.copyOf(targets));
+    this(targets == null ? Collections.emptyList() : List.of(targets));
   }
 
   public ZsyncForwardingObserver(Iterable<? extends ZsyncObserver> observers) {
-    Preconditions.checkNotNull(observers);
-    this.observers = copyOf(observers);
+    if(observers == null) {
+      throw new NullPointerException("Observers list can not be null");
+    }
+    this.observers = new ArrayList<>();
+    observers.forEach(o -> this.observers.add(o));
   }
 
   @Override

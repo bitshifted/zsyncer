@@ -1,5 +1,6 @@
 /**
  * Copyright (c) 2015, Salesforce.com, Inc. All rights reserved.
+ * Copyright (c) 2020, Bitshift (bitshifted.co), Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -27,19 +28,20 @@ package com.salesforce.zsync.internal;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
 
 public class ImmutableBlockSum extends BlockSum {
 
   public static List<ImmutableBlockSum> readSums(InputStream in, int numBlocks, int rsumBytes, int checksumBytes)
       throws IOException {
-    final ImmutableList.Builder<ImmutableBlockSum> b = ImmutableList.builder();
+    final List<ImmutableBlockSum> blockSumList = new ArrayList<>();
     for (int i = 0; i < numBlocks; i++) {
-      b.add(ImmutableBlockSum.read(in, rsumBytes, checksumBytes));
+      blockSumList.add(ImmutableBlockSum.read(in, rsumBytes, checksumBytes));
     }
-    return b.build();
+    return Collections.unmodifiableList(blockSumList);
   }
 
   public static ImmutableBlockSum read(InputStream in, int rsumBytes, int checksumBytes) throws IOException {
