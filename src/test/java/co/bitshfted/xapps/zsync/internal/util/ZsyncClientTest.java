@@ -27,22 +27,28 @@
 package co.bitshfted.xapps.zsync.internal.util;
 
 import co.bitshfted.xapps.zsync.http.ContentRange;
+import co.bitshfted.xapps.zsync.http.Credentials;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import static co.bitshfted.xapps.zsync.internal.util.EventLogHttpTransferListener.*;
+import static co.bitshfted.xapps.zsync.internal.util.ZsyncClient.*;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.*;
 
 public class ZsyncClientTest {
 
@@ -171,62 +177,64 @@ public class ZsyncClientTest {
     }
   }
 
-//  @SuppressWarnings("unchecked")
-//  @Test
-//  public void runtimeExceptionThrownForIoExceptionDuringHttpCommunication() throws Exception {
-//    // Arrange
-//    HttpClient mockHttpClient = mock(HttpClient.class);
-//    RangeReceiver mockReceiver = mock(RangeReceiver.class);
-//    RangeTransferListener listener = mock(RangeTransferListener.class);
-//    when(listener.newTransfer(any(List.class))).thenReturn(mock(HttpTransferListener.class));
-//    List<ContentRange> ranges = this.createSomeRanges(1);
-//    URI url = new URI("http://host/someurl");
-//    IOException expected = new IOException("IO");
-////    Call mockCall = mock(Call.class);
-////    when(mockCall.execute()).thenThrow(expected);
-////    when(mockHttpClient.newCall(any(Request.class))).thenReturn(mockCall);
-//
-//    // Act
-//    try {
-//      new ZsyncClient(mockHttpClient).partialGet(url, ranges, Collections.<String, Credentials>emptyMap(), mockReceiver,
-//          listener);
-//    } catch (IOException exception) {
-//
-//      // Assert
-//      assertEquals("IO", exception.getMessage());
-//    }
-//  }
+  @SuppressWarnings("unchecked")
+  @Test
+  public void runtimeExceptionThrownForIoExceptionDuringHttpCommunication() throws Exception {
+    // Arrange
+    HttpClient mockHttpClient = mock(HttpClient.class);
+    HttpResponse mockResponse = mock(HttpResponse.class);
+    when(mockHttpClient.send(any(HttpRequest.class), any())).thenReturn(mockResponse);
+    when(mockResponse.statusCode()).thenReturn(200);
+
+    byte[] responseBody = new byte[0];
+    when(mockResponse.body()).thenReturn(responseBody);
+    RangeReceiver mockReceiver = mock(RangeReceiver.class);
+    RangeTransferListener listener = mock(RangeTransferListener.class);
+    when(listener.newTransfer(any(List.class))).thenReturn(mock(HttpTransferListener.class));
+    List<ContentRange> ranges = this.createSomeRanges(1);
+    URI url = new URI("http://host/someurl");
+
+    // Act
+    try {
+      new ZsyncClient(mockHttpClient).partialGet(url, ranges, Collections.<String, Credentials>emptyMap(), mockReceiver,
+          listener);
+    } catch (IOException exception) {
+
+      // Assert
+      assertEquals("IO", exception.getMessage());
+    }
+  }
 
   @SuppressWarnings("unchecked")
-//  @Test
-//  public void runtimeExceptionThrownForHttpResponsesOtherThan206() throws IOException, URISyntaxException {
-//    // Arrange
-//    List<Integer> responsesToTest = Lists.newArrayList(500, 413); // Add whatever other ones we want
-//    OkHttpClient mockHttpClient = mock(OkHttpClient.class);
-//    RangeReceiver mockReceiver = mock(RangeReceiver.class);
-//    RangeTransferListener listener = mock(RangeTransferListener.class);
-//    when(listener.newTransfer(any(List.class))).thenReturn(mock(HttpTransferListener.class));
-//    List<ContentRange> ranges = this.createSomeRanges(1);
-//    URI url = new URI("http://host/someurl");
-//
-//    for (Integer responseToTest : responsesToTest) {
-//
-//      // Arrange some more
-//      Call mockCall = mock(Call.class);
-//      Response fakeResponse = this.fakeResponse(responseToTest);
-//      when(mockHttpClient.newCall(any(Request.class))).thenReturn(mockCall);
-//      when(mockCall.execute()).thenReturn(fakeResponse);
-//
-//      // Act
-//      try {
-//        new ZsyncClient(mockHttpClient).partialGet(url, ranges, Collections.<String, Credentials>emptyMap(),
-//            mockReceiver, listener);
-//      } catch (HttpError exception) {
-//        assertEquals(responseToTest.intValue(), exception.getCode());
-//      }
-//    }
-//
-//  }
+  @Test
+  public void runtimeExceptionThrownForHttpResponsesOtherThan206() throws IOException, URISyntaxException, InterruptedException {
+    // Arrange
+    List<Integer> responsesToTest = List.of(500, 413); // Add whatever other ones we want
+    HttpClient mockHttpClient = mock(HttpClient.class);
+    HttpResponse mockResponse = mock(HttpResponse.class);
+    when(mockHttpClient.send(any(HttpRequest.class), any())).thenReturn(mockResponse);
+
+    RangeReceiver mockReceiver = mock(RangeReceiver.class);
+    RangeTransferListener listener = mock(RangeTransferListener.class);
+    when(listener.newTransfer(any(List.class))).thenReturn(mock(HttpTransferListener.class));
+    List<ContentRange> ranges = this.createSomeRanges(1);
+    URI url = new URI("http://host/someurl");
+
+    for (Integer responseToTest : responsesToTest) {
+
+      // Arrange some more
+      when(mockResponse.statusCode()).thenReturn(responseToTest);
+
+      // Act
+      try {
+        new ZsyncClient(mockHttpClient).partialGet(url, ranges, Collections.emptyMap(),
+            mockReceiver, listener);
+      } catch (ZsyncClient.HttpError exception) {
+        assertEquals(responseToTest.intValue(), exception.getCode());
+      }
+    }
+
+  }
 
   private HttpResponse fakeResponse(int code) throws URISyntaxException {
     HttpRequest fakeRequest = HttpRequest.newBuilder().uri(new URI("http://host/url")).build();
@@ -240,138 +248,60 @@ public class ZsyncClientTest {
     return response;
   }
 
-//  @Test
-//  public void testTransferListener() throws IOException, HttpError {
-//    final URI uri = URI.create("http://host/bla");
-//
-//    final byte[] data = new byte[17];
-//    final ResponseBody body = mock(ResponseBody.class);
-//    when(body.contentLength()).thenReturn((long) data.length);
-//    when(body.source()).thenReturn(mock(BufferedSource.class));
-//    final InputStream inputStream = new ByteArrayInputStream(data);
-//    when(body.byteStream()).thenReturn(inputStream);
-//
-//    final Request request = new Request.Builder().url(uri.toString()).build();
-//    final Response response = new Response.Builder().protocol(HTTP_1_1).body(body).request(request).code(200).build();
-//
-//    final Call mockCall = mock(Call.class);
-//    when(mockCall.execute()).thenReturn(response);
-//    final OkHttpClient mockHttpClient = mock(OkHttpClient.class);
-//    when(mockHttpClient.newCall(any(Request.class))).thenReturn(mockCall);
-//
-//    final EventLogHttpTransferListener listener = new EventLogHttpTransferListener();
-//    final InputStream in =
-//        new ZsyncClient(mockHttpClient).get(uri, Collections.<String, Credentials>emptyMap(), listener);
-//    final byte[] b = new byte[8];
-//    assertEquals(0, in.read());
-//    assertEquals(8, in.read(b));
-//    assertEquals(8, in.read(b, 0, 8));
-//    assertEquals(-1, in.read());
-//    in.close();
-//
-//    final List<Event> events =
-//        ImmutableList.of(new Initialized(new Request.Builder().url(uri.toString()).build()), new Started(uri,
-//            data.length), new Transferred(1), new Transferred(8), new Transferred(8), Closed.INSTANCE);
-//    assertEquals(events, listener.getEventLog());
-//  }
+  @Test
+  public void testTransferListener() throws Exception {
+    final URI uri = URI.create("http://host/bla");
 
-//  @Test
-//  public void testChallenges() throws IOException, HttpError {
-//    final URI uri = URI.create("https://host/file");
-//    final Map<String, Credentials> credentials = ImmutableMap.of("host", new Credentials("jdoe", "secret"));
-//    final MockOkHttpClient okHttpClient = new MockOkHttpClient();
-//    final ZsyncClient zsyncClient = new ZsyncClient(okHttpClient);
-//    final HttpTransferListener listener = mock(HttpTransferListener.class);
-//
-//    // expect request without authorization header at first and then with
-//    okHttpClient.setNewCall(challengeSequence(uri, credentials));
-//    zsyncClient.get(uri, credentials, listener);
-//
-//    // subsequent https calls to same host should auth right away without challenge
-//    okHttpClient.setNewCall(newAuthorizedRequestCall(uri, credentials));
-//    zsyncClient.get(uri, credentials, listener);
-//
-//    // subsequent http calls should go not auth right away (to give a chance to redirect to https)
-//    final URI httpUri = URI.create("http://host/file");
-//    okHttpClient.setNewCall(challengeSequence(httpUri, credentials));
-//    zsyncClient.get(httpUri, credentials, listener);
-//  }
+    final byte[] data = new byte[17];
+    final HttpResponse response = mock(HttpResponse.class);
+    when(response.body()).thenReturn(data);
+    final InputStream inputStream = new ByteArrayInputStream(data);
 
-//  Function<Request, Call> newUnauthorizedRequestCall(final URI uri) {
-//    final Function<Request, Call> noAuthRequest = new Function<Request, Call>() {
-//      @Override
-//      public Call apply(Request request) {
-//        assertEquals(uri.toString(), request.urlString());
-//        assertEquals("GET", request.method());
-//        assertNull(request.header("Authorization"));
-//
-//        final Response response =
-//            new Response.Builder().header("WWW-Authenticate", "BASIC realm=\"global\"").code(HTTP_UNAUTHORIZED)
-//                .request(request).protocol(HTTP_1_1).build();
-//        Call call = mock(Call.class);
-//        try {
-//          when(call.execute()).thenReturn(response);
-//        } catch (IOException e) {
-//          throw new RuntimeException(e);
-//        }
-//        return call;
-//      }
-//    };
-//    return noAuthRequest;
-//  }
+    HttpRequest request = HttpRequest.newBuilder(uri).build();
+    final HttpClient mockHttpClient = mock(HttpClient.class);
+    when(mockHttpClient.send(any(HttpRequest.class), any())).thenReturn(response);
+    when(response.statusCode()).thenReturn(200);
+    when(response.request()).thenReturn(request);
 
-//  Function<Request, Call> newAuthorizedRequestCall(final URI uri, final Map<String, Credentials> credentials) {
-//    return new Function<Request, Call>() {
-//      @Override
-//      public Call apply(Request request) {
-//        assertEquals(uri.toString(), request.urlString());
-//        assertEquals("GET", request.method());
-//        assertEquals(credentials.get(uri.getHost()).basic(), request.header("Authorization"));
-//
-//        try {
-//          ResponseBody body = mock(ResponseBody.class);
-//          when(body.source()).thenReturn(mock(BufferedSource.class));
-//          when(body.byteStream()).thenReturn(mock(InputStream.class));
-//          final Response response =
-//              new Response.Builder().code(HTTP_OK).body(body).request(request).protocol(HTTP_1_1).build();
-//          final Call call = mock(Call.class);
-//          when(call.execute()).thenReturn(response);
-//          return call;
-//        } catch (IOException e) {
-//          throw new RuntimeException(e);
-//        }
-//      }
-//    };
-//  }
-//
-//  Function<Request, Call> challengeSequence(final URI uri, final Map<String, Credentials> credentials) {
-//    return sequence(newUnauthorizedRequestCall(uri), newAuthorizedRequestCall(uri, credentials));
-//  }
+    final EventLogHttpTransferListener listener = new EventLogHttpTransferListener();
+    final InputStream in =
+        new ZsyncClient(mockHttpClient).get(uri, Collections.emptyMap(), listener);
+    final byte[] b = new byte[8];
+    assertEquals(0, in.read());
+    assertEquals(8, in.read(b));
+    assertEquals(8, in.read(b, 0, 8));
+    assertEquals(-1, in.read());
+    in.close();
 
-//  @SafeVarargs
-//  final Function<Request, Call> sequence(final Function<Request, Call>... calls) {
-//    return new Function<Request, Call>() {
-//      int i = 0;
-//
-//      @Override
-//      public Call apply(Request input) {
-//        return calls[this.i++].apply(input);
-//      }
-//    };
-//  }
-//
-//  private static class MockOkHttpClient extends OkHttpClient {
-//    private Function<? super Request, ? extends Call> newCall;
-//
-//    public void setNewCall(Function<? super Request, ? extends Call> newCall) {
-//      this.newCall = newCall;
-//    }
-//
-//    @Override
-//    public Call newCall(Request request) {
-//      return this.newCall.apply(request);
-//    }
-//  }
+    final List<Event> events =
+        List.of(new Initialized(request), new Started(uri,
+            data.length), new Transferred(1), new Transferred(8), new Transferred(8), Closed.INSTANCE);
+    assertEquals(events, listener.getEventLog());
+  }
+
+  @Test
+  public void testChallenges() throws Exception {
+    final URI uri = URI.create("https://host/file");
+    final Map<String, Credentials> credentials = Map.of("host", new Credentials("jdoe", "secret"));
+    final HttpClient httpClient = mock(HttpClient.class);
+    final ZsyncClient zsyncClient = new ZsyncClient(httpClient);
+    final HttpTransferListener listener = mock(HttpTransferListener.class);
+
+    // expect request without authorization header at first and then with
+    HttpResponse mockResponse = mock(HttpResponse.class);
+    when(httpClient.send(any(HttpRequest.class), any())).thenReturn(mockResponse);
+    when(mockResponse.statusCode()).thenReturn(401, 200, 200);
+    HttpHeaders headers = HttpHeaders.of(Map.of("WWW-Authenticate", List.of("something")), ((s1,s2) -> true));
+    when(mockResponse.headers()).thenReturn(headers);
+    byte[] body = new byte[0];
+    when(mockResponse.body()).thenReturn(body);
+    zsyncClient.get(uri, credentials, listener);
+
+    // subsequent https calls to same host should auth right away without challenge
+    zsyncClient.get(uri, credentials, listener);
+
+  }
+
 
   private List<ContentRange> createSomeRanges(int numberOfRangesToCreate) {
     List<ContentRange> ranges = new ArrayList<>(numberOfRangesToCreate);
