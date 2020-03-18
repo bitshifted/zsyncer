@@ -28,7 +28,7 @@ package com.salesforce.zsync.http;
 
 import java.util.Base64;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Credentials used to authenticate with remote http hosts
@@ -41,8 +41,8 @@ public class Credentials {
   private final String password;
 
   public Credentials(String username, String password) {
-    checkNotNull(username);
-    checkNotNull(password);
+    requireNonNull(username, "Username can not be unll");
+    requireNonNull(password, "Password can not be null");
     this.username = username;
     this.password = password;
   }

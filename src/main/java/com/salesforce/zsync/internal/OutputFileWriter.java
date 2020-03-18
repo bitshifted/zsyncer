@@ -1,5 +1,6 @@
 /**
  * Copyright (c) 2015, Salesforce.com, Inc. All rights reserved.
+ * Copyright (c) 2020, Bitshift (bitshifted.co), Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -25,12 +26,12 @@
  */
 package com.salesforce.zsync.internal;
 
-import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.READ;
-import static java.nio.file.StandardOpenOption.WRITE;
-import static java.nio.file.attribute.FileTime.fromMillis;
+import com.salesforce.zsync.http.ContentRange;
+import com.salesforce.zsync.internal.util.ReadableByteBuffer;
+import com.salesforce.zsync.internal.util.TransferListener;
+import com.salesforce.zsync.internal.util.TransferListener.ResourceTransferListener;
+import com.salesforce.zsync.internal.util.ZsyncClient.RangeReceiver;
+import com.salesforce.zsync.internal.util.ZsyncUtil;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -42,17 +43,12 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
+import java.util.*;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.salesforce.zsync.http.ContentRange;
-import com.salesforce.zsync.internal.util.ReadableByteBuffer;
-import com.salesforce.zsync.internal.util.TransferListener;
-import com.salesforce.zsync.internal.util.ZsyncUtil;
-import com.salesforce.zsync.internal.util.ZsyncClient.RangeReceiver;
-import com.salesforce.zsync.internal.util.TransferListener.ResourceTransferListener;
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.nio.file.StandardOpenOption.*;
+import static java.nio.file.attribute.FileTime.fromMillis;
 
 public class OutputFileWriter implements RangeReceiver, Closeable {
 
@@ -66,7 +62,7 @@ public class OutputFileWriter implements RangeReceiver, Closeable {
   private final String sha1;
   private final long mtime;
   private final List<BlockSum> blockSums;
-  private final ListMultimap<BlockSum, Integer> positions;
+  private final Map<BlockSum, List<Integer>> positions;
   // mutable state
   private final FileChannel channel;
   private final boolean[] completed;
@@ -100,18 +96,26 @@ public class OutputFileWriter implements RangeReceiver, Closeable {
     this.channel = FileChannel.open(this.tempPath, CREATE, WRITE, READ);
 
 
-    this.blockSums = ImmutableList.copyOf(controlFile.getBlockSums());
+    this.blockSums = Collections.unmodifiableList(controlFile.getBlockSums());
     this.positions = indexPositions(this.blockSums);
     this.completed = new boolean[this.blockSums.size()];
     this.blocksRemaining = this.completed.length;
   }
 
-  static ListMultimap<BlockSum, Integer> indexPositions(List<BlockSum> blockSums) {
-    final ImmutableListMultimap.Builder<BlockSum, Integer> b = ImmutableListMultimap.builder();
+  static Map<BlockSum, List<Integer>> indexPositions(List<BlockSum> blockSums) {
+    final Map<BlockSum, List<Integer>> b = new HashMap<>();
     for (int i = 0; i < blockSums.size(); i++) {
-      b.put(blockSums.get(i), i);
+      var list = b.get(blockSums.get(i));
+      if(list != null) {
+        b.get(blockSums.get(i)).add(i);
+      } else {
+        list = new ArrayList<>();
+        list.add(i);
+        b.put(blockSums.get(i), list);
+      }
+
     }
-    return b.build();
+    return Collections.unmodifiableMap(b);
   }
 
   public int getNumBlocks() {
@@ -147,7 +151,7 @@ public class OutputFileWriter implements RangeReceiver, Closeable {
   }
 
   public List<ContentRange> getMissingRanges() {
-    final ImmutableList.Builder<ContentRange> b = ImmutableList.builder();
+    final List<ContentRange> b = new ArrayList<>();
     long start = -1;
     for (int i = 0; i < this.completed.length; i++) {
       if (this.completed[i]) {
@@ -167,7 +171,7 @@ public class OutputFileWriter implements RangeReceiver, Closeable {
         }
       }
     }
-    return b.build();
+    return Collections.unmodifiableList(b);
   }
 
   public boolean isComplete() {

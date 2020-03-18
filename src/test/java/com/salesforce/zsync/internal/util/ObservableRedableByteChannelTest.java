@@ -25,7 +25,7 @@
  */
 package com.salesforce.zsync.internal.util;
 
-import static com.google.common.collect.ImmutableList.of;
+import static java.util.List.of;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;

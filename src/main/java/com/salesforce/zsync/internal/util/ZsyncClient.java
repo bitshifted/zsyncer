@@ -26,8 +26,6 @@
  */
 package com.salesforce.zsync.internal.util;
 
-import com.google.common.io.ByteStreams;
-import com.google.common.net.MediaType;
 import com.salesforce.zsync.http.ContentRange;
 import com.salesforce.zsync.http.Credentials;
 import com.salesforce.zsync.internal.util.ObservableInputStream.ObservableResourceInputStream;
@@ -45,17 +43,15 @@ import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
-import static com.google.common.base.Joiner.on;
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableList.copyOf;
-import static com.google.common.collect.Iterables.limit;
 import static java.lang.Math.min;
 import static java.net.HttpURLConnection.*;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Collections.newSetFromMap;
+import static com.salesforce.zsync.internal.util.ZsyncUtil.checkArgument;
 
 
 /**
@@ -179,7 +175,7 @@ public class ZsyncClient {
       RangeReceiver receiver, RangeTransferListener listener) throws IOException, HttpError, InterruptedException {
     final Set<ContentRange> remaining = new LinkedHashSet<>(ranges);
     while (!remaining.isEmpty()) {
-      final List<ContentRange> next = copyOf(limit(remaining, min(remaining.size(), MAXIMUM_RANGES_PER_HTTP_REQUEST)));
+      final List<ContentRange> next = remaining.stream().limit(min(remaining.size(), MAXIMUM_RANGES_PER_HTTP_REQUEST)).collect(Collectors.toList());
       final HttpTransferListener requestListener = listener.newTransfer(next);
       final HttpResponse<byte[]> response = executeWithAuthRetry(uri, credentials, requestListener, next);
       final int code = response.statusCode();
@@ -237,7 +233,9 @@ public class ZsyncClient {
       }
     }
     if (!ranges.isEmpty()) {
-      builder.header("Range", "bytes=" + on(',').join(ranges));
+      StringBuilder sb = new StringBuilder("bytes=");
+      ranges.forEach(r -> sb.append(r.toString()).append(","));
+      builder.header("Range", sb.toString().substring(0, sb.length() - 1)); // exclude trailing ','
     }
     return builder.build();
   }
@@ -277,7 +275,7 @@ public class ZsyncClient {
         if (!remaining.remove(range)) {
           throw new IOException("Received range " + range + " not one of requested " + remaining);
         }
-        final InputStream part = ByteStreams.limit(in, range.length());
+        final InputStream part = new LimitedInputStream(in, range.length());
         receiver.receive(range, part);
       }
     }
@@ -373,7 +371,7 @@ public class ZsyncClient {
       throw new IOException("Invalid multipart subtype " + mediaType.subtype() + ", expected 'byteranges'");
     }
     final List<String> value = mediaType.parameters().get("boundary");
-    if (value.isEmpty()) {
+    if (value == null || value.isEmpty()) {
       throw new IOException("Missing multipart boundary parameter");
     }
     return value.get(0).getBytes(ISO_8859_1);

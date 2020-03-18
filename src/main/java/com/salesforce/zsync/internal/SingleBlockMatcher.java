@@ -1,5 +1,6 @@
 /**
  * Copyright (c) 2015, Salesforce.com, Inc. All rights reserved.
+ * Copyright (c) 2020, Bitshift (bitshifted.co), Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -25,18 +26,15 @@
  */
 package com.salesforce.zsync.internal;
 
-import static com.salesforce.zsync.internal.BlockSum.getRsum;
-import static com.salesforce.zsync.internal.SingleBlockMatcher.State.INIT;
-import static com.salesforce.zsync.internal.SingleBlockMatcher.State.MATCHED;
-import static com.salesforce.zsync.internal.SingleBlockMatcher.State.MISSED;
-import static com.salesforce.zsync.internal.util.ZsyncUtil.newMD4;
+import com.salesforce.zsync.internal.util.ReadableByteBuffer;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.salesforce.zsync.internal.util.ReadableByteBuffer;
+import static com.salesforce.zsync.internal.BlockSum.getRsum;
+import static com.salesforce.zsync.internal.SingleBlockMatcher.State.*;
+import static com.salesforce.zsync.internal.util.ZsyncUtil.newMD4;
 
 public class SingleBlockMatcher extends BlockMatcher {
 
@@ -54,7 +52,7 @@ public class SingleBlockMatcher extends BlockMatcher {
   public SingleBlockMatcher(ControlFile controlFile) {
     final Header header = controlFile.getHeader();
     this.blockSize = header.getBlocksize();
-    this.rsumHashSet = ImmutableSet.copyOf(Iterables.transform(controlFile.getBlockSums(), getRsum));
+    this.rsumHashSet = controlFile.getBlockSums().stream().map(bsum -> getRsum.apply(bsum)).collect(Collectors.toUnmodifiableSet());
     this.state = INIT;
     this.blockSum = new MutableBlockSum(newMD4(), this.blockSize, header.getRsumBytes(), header.getChecksumBytes());
   }

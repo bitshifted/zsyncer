@@ -1,5 +1,6 @@
 /**
  * Copyright (c) 2015, Salesforce.com, Inc. All rights reserved.
+ * Copyright (c) 2020, Bitshift (bitshifted.co), Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -32,13 +33,8 @@ import static com.salesforce.zsync.internal.DoubleBlockMatcher.State.MISSED;
 import static com.salesforce.zsync.internal.util.ZsyncUtil.toLong;
 
 import java.security.MessageDigest;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.salesforce.zsync.internal.util.ReadableByteBuffer;
 import com.salesforce.zsync.internal.util.ZsyncUtil;
 
@@ -71,7 +67,7 @@ public class DoubleBlockMatcher extends BlockMatcher {
   }
 
   static Set<Long> computeRsumHashSet(Iterable<? extends BlockSum> blockSums) {
-    final ImmutableSet.Builder<Long> b = ImmutableSet.builder();
+    final Set<Long> b = new HashSet<>();
     final Iterator<? extends BlockSum> it = blockSums.iterator();
     if (it.hasNext()) {
       BlockSum prev = it.next();
@@ -81,7 +77,7 @@ public class DoubleBlockMatcher extends BlockMatcher {
         prev = cur;
       }
     }
-    return b.build();
+    return Collections.unmodifiableSet(b);
   }
 
   @Override
@@ -185,13 +181,13 @@ public class DoubleBlockMatcher extends BlockMatcher {
     if (positions.size() == 1) {
       return this.isNextMatch(outputFile, buffer, positions.get(0)) ? positions : Collections.<Integer>emptyList();
     } else {
-      final ImmutableList.Builder<Integer> b = ImmutableList.builder();
+      final List<Integer> b = new ArrayList<>();
       for (Integer position : positions) {
         if (this.isNextMatch(outputFile, buffer, position)) {
           b.add(position);
         }
       }
-      return b.build();
+      return Collections.unmodifiableList(b);
     }
   }
 

@@ -1,5 +1,6 @@
 /**
  * Copyright (c) 2015, Salesforce.com, Inc. All rights reserved.
+ * Copyright (c) 2020, Bitshift (bitshifted.co), Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification, are permitted
  * provided that the following conditions are met:
@@ -29,15 +30,16 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
+
 import com.salesforce.zsync.Zsync.Options;
 import com.salesforce.zsync.http.ContentRange;
+import com.salesforce.zsync.internal.util.Stopwatch;
 
 public class ZsyncStatsObserver extends ZsyncObserver {
 
@@ -77,13 +79,13 @@ public class ZsyncStatsObserver extends ZsyncObserver {
   private long elapsedMillisDownloading = 0;
   private long elapsedMillisDownloadingControlFile = 0;
   private long elapsedMillisDownloadingRemoteFile = 0;
-  private final Builder<List<ContentRange>, Long> elapsedMillisByRangeRequest = ImmutableMap.builder();
+  private final Map<List<ContentRange>, Long> elapsedMillisByRangeRequest = new HashMap<>();
   private List<ContentRange> ranges;
 
   // data
 
-  private final Builder<Path, Long> bytesWrittenByInputFile = ImmutableMap.builder();
-  private final Builder<Path, Long> bytesReadByInputFile = ImmutableMap.builder();
+  private final Map<Path, Long> bytesWrittenByInputFile = new HashMap<>();
+  private final Map<Path, Long> bytesReadByInputFile = new HashMap<>();
 
   private long bytesRead = 0;
   private long bytesWritten = 0;
@@ -211,13 +213,13 @@ public class ZsyncStatsObserver extends ZsyncObserver {
   }
 
   public ZsyncStats build() {
-    final Map<Path, Long> bytesWrittenByInputFile = this.bytesWrittenByInputFile.build();
-    final Map<Path, Long> bytesReadByInputFile = this.bytesReadByInputFile.build();
+    final Map<Path, Long> bytesWrittenByInputFile = Collections.unmodifiableMap(this.bytesWrittenByInputFile);
+    final Map<Path, Long> bytesReadByInputFile = Collections.unmodifiableMap(this.bytesReadByInputFile);
     final long totalElapsedMilliseconds = this.stopwatch.elapsed(TimeUnit.MILLISECONDS);
     final long elapsedMillisecondsDownloading = this.elapsedMillisDownloading;
     final long elapsedMillisecondsDownloadingControlFile = this.elapsedMillisDownloadingControlFile;
     final long elapsedMillisecondsDownloadingRemoteFile = this.elapsedMillisDownloadingRemoteFile;
-    final Map<List<ContentRange>, Long> elapsedMillisByRangeRequest = this.elapsedMillisByRangeRequest.build();
+    final Map<List<ContentRange>, Long> elapsedMillisByRangeRequest = Collections.unmodifiableMap(this.elapsedMillisByRangeRequest);
     final long totalBytesDownloaded = this.totalBytesDownloaded;
     final long bytesDownloadedForControlFile = this.bytesDownloadedForControlFile;
     final long bytesDownloadedFromRemoteTarget = this.bytesDownloadedFromRemoteTarget;

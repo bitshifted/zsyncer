@@ -37,8 +37,8 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 
-import static com.google.common.collect.ImmutableList.of;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -54,7 +54,7 @@ public class ObservableInputStreamTest {
     InputStream in = new ObservableInputStream(new ByteArrayInputStream(new byte[10]), listener);
     in.read();
     in.read(new byte[2]);
-    assertEquals(of(new Transferred(1), new Transferred(2)), listener.getEventLog());
+    assertEquals(List.of(new Transferred(1), new Transferred(2)), listener.getEventLog());
   }
 
   /**
@@ -78,7 +78,7 @@ public class ObservableInputStreamTest {
     EventLogHttpTransferListener listener = new EventLogHttpTransferListener();
     InputStream in = new ObservableInputStream(new ByteArrayInputStream(new byte[0]), listener);
     in.close();
-    assertEquals(of(Closed.INSTANCE), listener.getEventLog());
+    assertEquals(List.of(Closed.INSTANCE), listener.getEventLog());
   }
 
   /**
@@ -96,7 +96,7 @@ public class ObservableInputStreamTest {
     } catch (IOException e) {
       assertEquals("test", e.getMessage());
     }
-    assertEquals(of(Closed.INSTANCE), listener.getEventLog());
+    assertEquals(List.of(Closed.INSTANCE), listener.getEventLog());
   }
 
   @Test
@@ -111,7 +111,7 @@ public class ObservableInputStreamTest {
     InputStream in =
         new ObservableInputStream.ObservableResourceInputStream<HttpResponse<byte[]>>(new ByteArrayInputStream(new byte[0]), listener, mockResponse, 1l);
     in.close();
-    assertEquals(of(new Started(uri, 1l), Closed.INSTANCE), listener.getEventLog());
+    assertEquals(List.of(new Started(uri, 1l), Closed.INSTANCE), listener.getEventLog());
   }
 
 }
