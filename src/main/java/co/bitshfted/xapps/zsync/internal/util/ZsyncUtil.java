@@ -37,7 +37,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
 
-import org.apache.mina.proxy.utils.MD4;
+import co.bitshfted.xapps.zsync.apache.mina.MD4;
 
 public class ZsyncUtil {
 
@@ -45,7 +45,7 @@ public class ZsyncUtil {
   private static final Provider md4Provider;
 
   static {
-    md4Provider = new Provider("MD4Provider", 1d, "implements md4") {
+    md4Provider = new Provider("MD4Provider", "1", "implements md4") {
       private static final long serialVersionUID = 6386613936557154160L;
     };
     md4Provider.put("MessageDigest.MD4", MD4.class.getName());

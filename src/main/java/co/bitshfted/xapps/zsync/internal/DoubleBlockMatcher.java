@@ -172,7 +172,7 @@ public class DoubleBlockMatcher extends BlockMatcher {
 
   private List<Integer> tryMatchNext(final OutputFileWriter outputFile, final ReadableByteBuffer buffer) {
     final List<Integer> positions = outputFile.getPositions(this.currentBlockSum);
-    return positions.isEmpty() ? Collections.<Integer>emptyList() : this.filterMatches(outputFile, buffer, positions);
+    return (positions == null || positions.isEmpty())  ? Collections.emptyList() : this.filterMatches(outputFile, buffer, positions);
   }
 
   private List<Integer> filterMatches(final OutputFileWriter outputFile, ReadableByteBuffer buffer, List<Integer> positions) {

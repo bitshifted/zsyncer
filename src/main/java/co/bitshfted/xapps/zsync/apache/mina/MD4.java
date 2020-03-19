@@ -17,7 +17,7 @@
  *  under the License.
  *
  */
-package org.apache.mina.proxy.utils;
+package co.bitshfted.xapps.zsync.apache.mina;
 
 import java.security.DigestException;
 import java.security.MessageDigestSpi;
