@@ -35,6 +35,7 @@ import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 public class Header {
 
@@ -122,7 +123,7 @@ public class Header {
         sha1 = value;
       } else if ("MTime".equals(name)) {
         try {
-          mtime = new SimpleDateFormat("EEE, dd MMMMM yyyy HH:mm:ss Z").parse(value);
+          mtime = new SimpleDateFormat("EEE, dd MMMMM yyyy HH:mm:ss Z", Locale.ENGLISH).parse(value);
         } catch (ParseException e) {
           throwInvalidHeaderValue(name, value);
         }

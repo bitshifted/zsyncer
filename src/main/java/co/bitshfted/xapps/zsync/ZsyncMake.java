@@ -43,6 +43,7 @@ import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TimeZone;
 
 import co.bitshfted.xapps.zsync.internal.util.ZsyncUtil;
@@ -61,7 +62,7 @@ public class ZsyncMake {
 
   @SuppressWarnings("serial")
   private static final SimpleDateFormat LAST_MODIFIED_TIME_FORMAT =
-      new SimpleDateFormat("EEE, dd MMMMM yyyy HH:mm:ss Z") {
+      new SimpleDateFormat("EEE, dd MMMMM yyyy HH:mm:ss Z", Locale.ENGLISH) {
         {
           this.setTimeZone(TimeZone.getTimeZone("GMT"));
         }
