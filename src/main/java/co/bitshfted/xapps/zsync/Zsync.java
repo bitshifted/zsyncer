@@ -69,6 +69,7 @@ public class Zsync {
     private Path saveZsyncFile;
     private URI zsyncUri;
     private Map<String, Credentials> credentials = new HashMap<>(2);
+    private String useragent = "zsync/1.0 (Java)";
 
     public Options() {
       super();
@@ -81,6 +82,7 @@ public class Zsync {
         this.saveZsyncFile = other.saveZsyncFile;
         this.zsyncUri = other.zsyncUri;
         this.credentials.putAll(other.credentials);
+        this.useragent = other.useragent;
       }
     }
 
@@ -204,6 +206,24 @@ public class Zsync {
       return this.credentials;
     }
 
+    /**
+     * The User-Agent zsync use
+     *
+     * @return
+     */
+    public String getUseragent() {
+      return useragent;
+    }
+
+    /**
+     * Set the User-Agent zsync use for the sync
+     *
+     * @return
+     */
+    public Options setUseragent(String useragent) {
+      this.useragent = useragent;
+      return this;
+    }
   }
 
   public static final String VERSION = "0.6.2";
@@ -335,7 +355,7 @@ public class Zsync {
         new OutputFileWriter(outputFile, controlFile, events.getOutputFileWriteListener())) {
       if (!this.processInputFiles(outputFileWriter, controlFile, options.getInputFiles(), events)) {
         this.zsyncClient.partialGet(remoteFileUri, outputFileWriter.getMissingRanges(), options.getCredentials(),
-            events.getRangeReceiverListener(outputFileWriter), events.getRemoteFileDownloadListener());
+                options.getUseragent(), events.getRangeReceiverListener(outputFileWriter), events.getRemoteFileDownloadListener());
       }
     } catch (ChecksumValidationIOException exception) {
       throw new ZsyncChecksumValidationFailedException("Calculated checksum does not match expected checksum");
@@ -376,10 +396,11 @@ public class Zsync {
         final Map<String, Credentials> credentials = options.getCredentials();
         // check if we should persist the file locally
         final Path savePath = options.getSaveZsyncFile();
+        final String useragent = options.getUseragent();
         if (savePath == null) {
-          in = zsyncClient.get(zsyncFile, credentials, listener);
+          in = zsyncClient.get(zsyncFile, credentials, useragent, listener);
         } else {
-          zsyncClient.get(zsyncFile, savePath, credentials, listener);
+          zsyncClient.get(zsyncFile, savePath, credentials, useragent, listener);
           in = this.openZsyncFile(savePath, events);
         }
       } else {
@@ -475,6 +496,8 @@ public class Zsync {
         options.addInputFile(fs.getPath(args[++i]));
       } else if ("-o".equals(args[i])) {
         options.setOutputFile(fs.getPath(args[++i]));
+      } else if ("--user-agent".equals(args[i])) {
+        options.setUseragent(args[++i]);
       }
     }
     final URI uri = URI.create(args[args.length - 1]);

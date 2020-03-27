@@ -126,12 +126,12 @@ public class ZsyncClient {
    * @throws IOException
    * @throws HttpError
    */
-  public void get(URI uri, Path output, Map<String, ? extends Credentials> credentials, HttpTransferListener listener)
+  public void get(URI uri, Path output, Map<String, ? extends Credentials> credentials, String useragent, HttpTransferListener listener)
       throws IOException, HttpError, InterruptedException {
     final Path parent = output.getParent();
     final Path tmp = parent.resolve(output.getFileName() + ".part");
     Files.createDirectories(parent);
-    try (InputStream in = this.get(uri, credentials, listener)) {
+    try (InputStream in = this.get(uri, credentials, useragent, listener)) {
       Files.copy(in, tmp, REPLACE_EXISTING);
     }
     Files.move(tmp, output, REPLACE_EXISTING, ATOMIC_MOVE);
@@ -148,9 +148,9 @@ public class ZsyncClient {
    * @throws IOException
    * @throws HttpError
    */
-  public InputStream get(URI uri, Map<String, ? extends Credentials> credentials, HttpTransferListener listener)
+  public InputStream get(URI uri, Map<String, ? extends Credentials> credentials, String useragent, HttpTransferListener listener)
       throws IOException, HttpError, InterruptedException {
-    final HttpResponse<byte[]> response = executeWithAuthRetry(uri, credentials, listener, Collections.<ContentRange>emptyList());
+    final HttpResponse<byte[]> response = executeWithAuthRetry(uri, credentials, useragent, listener, Collections.<ContentRange>emptyList());
     final int code = response.statusCode();
     if (code != HTTP_OK) {
       throw new HttpError("Request failed", code);
@@ -168,13 +168,13 @@ public class ZsyncClient {
    * @throws IOException
    * @throws HttpError
    */
-  public void partialGet(URI uri, List<ContentRange> ranges, Map<String, ? extends Credentials> credentials,
+  public void partialGet(URI uri, List<ContentRange> ranges, Map<String, ? extends Credentials> credentials, String useragent,
       RangeReceiver receiver, RangeTransferListener listener) throws IOException, HttpError, InterruptedException {
     final Set<ContentRange> remaining = new LinkedHashSet<>(ranges);
     while (!remaining.isEmpty()) {
       final List<ContentRange> next = remaining.stream().limit(min(remaining.size(), MAXIMUM_RANGES_PER_HTTP_REQUEST)).collect(Collectors.toList());
       final HttpTransferListener requestListener = listener.newTransfer(next);
-      final HttpResponse<byte[]> response = executeWithAuthRetry(uri, credentials, requestListener, next);
+      final HttpResponse<byte[]> response = executeWithAuthRetry(uri, credentials, useragent, requestListener, next);
       final int code = response.statusCode();
       // tolerate case that server does not support range requests
       if (code == HTTP_OK) {
@@ -196,9 +196,9 @@ public class ZsyncClient {
     }
   }
 
-  HttpResponse<byte[]> executeWithAuthRetry(URI uri, Map<String, ? extends Credentials> credentials, HttpTransferListener listener,
+  HttpResponse<byte[]> executeWithAuthRetry(URI uri, Map<String, ? extends Credentials> credentials, String useragent, HttpTransferListener listener,
                                                  List<ContentRange> ranges) throws IOException, InterruptedException {
-    HttpRequest request = buildRequest(uri, credentials, ranges);
+    HttpRequest request = buildRequest(uri, credentials, useragent, ranges);
     listener.initiating(request);
     HttpResponse<byte[]> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
     for (int i = 0; i < 10; i++) {
@@ -220,7 +220,7 @@ public class ZsyncClient {
     return response;
   }
 
-  HttpRequest buildRequest(URI uri, Map<String, ? extends Credentials> credentials, List<ContentRange> ranges) {
+  HttpRequest buildRequest(URI uri, Map<String, ? extends Credentials> credentials, String useragent, List<ContentRange> ranges) {
     final HttpRequest.Builder builder = HttpRequest.newBuilder();
     builder.uri(uri);
     if (this.basicChallengeReceived.contains(uri.getHost()) && "https".equals(uri.getScheme())) {
@@ -234,6 +234,7 @@ public class ZsyncClient {
       ranges.forEach(r -> sb.append(r.toString()).append(","));
       builder.header("Range", sb.toString().substring(0, sb.length() - 1)); // exclude trailing ','
     }
+    builder.setHeader("User-Agent", useragent);
     return builder.build();
   }
 

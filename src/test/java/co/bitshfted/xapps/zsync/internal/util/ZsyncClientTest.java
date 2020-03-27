@@ -196,8 +196,8 @@ public class ZsyncClientTest {
 
     // Act
     try {
-      new ZsyncClient(mockHttpClient).partialGet(url, ranges, Collections.<String, Credentials>emptyMap(), mockReceiver,
-          listener);
+      new ZsyncClient(mockHttpClient).partialGet(url, ranges, Collections.<String, Credentials>emptyMap(), "zsync/1.0",
+              mockReceiver, listener);
     } catch (IOException exception) {
 
       // Assert
@@ -227,7 +227,7 @@ public class ZsyncClientTest {
 
       // Act
       try {
-        new ZsyncClient(mockHttpClient).partialGet(url, ranges, Collections.emptyMap(),
+        new ZsyncClient(mockHttpClient).partialGet(url, ranges, Collections.emptyMap(), "zsync/1.0",
             mockReceiver, listener);
       } catch (ZsyncClient.HttpError exception) {
         assertEquals(responseToTest.intValue(), exception.getCode());
@@ -265,7 +265,7 @@ public class ZsyncClientTest {
 
     final EventLogHttpTransferListener listener = new EventLogHttpTransferListener();
     final InputStream in =
-        new ZsyncClient(mockHttpClient).get(uri, Collections.emptyMap(), listener);
+        new ZsyncClient(mockHttpClient).get(uri, Collections.emptyMap(), "zsync/1.0", listener);
     final byte[] b = new byte[8];
     assertEquals(0, in.read());
     assertEquals(8, in.read(b));
@@ -283,6 +283,7 @@ public class ZsyncClientTest {
   public void testChallenges() throws Exception {
     final URI uri = URI.create("https://host/file");
     final Map<String, Credentials> credentials = Map.of("host", new Credentials("jdoe", "secret"));
+    final String useragent = "zsync/1.0";
     final HttpClient httpClient = mock(HttpClient.class);
     final ZsyncClient zsyncClient = new ZsyncClient(httpClient);
     final HttpTransferListener listener = mock(HttpTransferListener.class);
@@ -295,10 +296,10 @@ public class ZsyncClientTest {
     when(mockResponse.headers()).thenReturn(headers);
     byte[] body = new byte[0];
     when(mockResponse.body()).thenReturn(body);
-    zsyncClient.get(uri, credentials, listener);
+    zsyncClient.get(uri, credentials, useragent, listener);
 
     // subsequent https calls to same host should auth right away without challenge
-    zsyncClient.get(uri, credentials, listener);
+    zsyncClient.get(uri, credentials, useragent, listener);
 
   }
 
